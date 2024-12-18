@@ -10,18 +10,18 @@ def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 def train_one_epoch():
-    # Custom transforms for MNIST
+    # Enhanced transforms for MNIST
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,)),
         transforms.RandomApply([
             transforms.RandomAffine(
-                degrees=5,
-                translate=(0.05, 0.05),
-                scale=(0.95, 1.05),
+                degrees=10,  # Increased rotation
+                translate=(0.1, 0.1),  # Increased translation
+                scale=(0.9, 1.1),  # Increased scale variation
                 fill=0
             )
-        ], p=0.5)
+        ], p=0.7)  # Increased probability
     ])
 
     train_dataset = datasets.MNIST('./data', train=True, download=True, transform=transform)
@@ -41,28 +41,20 @@ def train_one_epoch():
     if param_count >= 25000:
         raise ValueError("Model has too many parameters!")
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.NLLLoss()  # Changed to NLLLoss since we're using log_softmax
     optimizer = optim.AdamW(
         model.parameters(),
-        lr=0.003,
+        lr=0.001,  # Reduced initial learning rate
         betas=(0.9, 0.999),
         eps=1e-8,
         weight_decay=0.01
     )
     
-    # Custom learning rate schedule
-    def get_lr(step, total_steps, lr_max, lr_min):
-        return lr_min + (lr_max - lr_min) * 0.5 * (1 + math.cos(step / total_steps * math.pi))
-
-    total_steps = len(train_loader)
-    scheduler = torch.optim.lr_scheduler.LambdaLR(
+    # Cosine annealing scheduler
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer,
-        lr_lambda=lambda step: get_lr(
-            step,
-            total_steps,
-            lr_max=1,  # Will give initial lr of 0.003
-            lr_min=0.1  # Will give final lr of 0.0003
-        )
+        T_max=len(train_loader),
+        eta_min=1e-6
     )
 
     model.train()
