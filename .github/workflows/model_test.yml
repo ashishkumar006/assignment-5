@@ -14,15 +14,24 @@ jobs:
       with:
         python-version: '3.8'
         
+    - name: Cache pip packages
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+        
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install torch torchvision pytest numpy
+        pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+        pip install pytest numpy
         
     - name: Test Parameter Count
       run: |
-        pytest tests/test_model.py::test_parameter_count -v
+        PYTHONPATH=$PYTHONPATH:$(pwd) pytest tests/test_model.py::test_parameter_count -v
         
     - name: Test Model Accuracy
       run: |
-        pytest tests/test_model.py::test_model_accuracy -v
+        PYTHONPATH=$PYTHONPATH:$(pwd) pytest tests/test_model.py::test_model_accuracy -v
